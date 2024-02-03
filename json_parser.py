@@ -7,10 +7,14 @@ TOKEN_TYPES = {
     'LBRACE': r'\{',
     'RBRACE': r'\}',
     'STRING': r'"([^"\\]*(\\.[^"\\]*)*)"',
+    'NUMBER': r'-?\d+(\.\d+)?([eE][+-]?\d+)?',
+    'BOOLEAN': r'true|false',
+    'NULL': r'null',
     'COLON': r':',
     'COMMA': r',',
     'EOF': r'$'
 }
+
 
 class Token:
     def __init__(self, type, value):
@@ -52,37 +56,42 @@ def lexer(input):
     tokens.append(Token('EOF', None))
     return tokens
 
-
 def parse(tokens):
+    def parse_value(token):
+        if token.type == 'STRING':
+            return token.value
+        elif token.type == 'NUMBER':
+            try:
+                return int(token.value)
+            except ValueError:
+                return float(token.value)
+        elif token.type == 'BOOLEAN':
+            return token.value == 'true'
+        elif token.type == 'NULL':
+            return None
+        else:
+            raise ValueError(f"Unsupported value type: {token.type}")
+
     def parse_object(tokens):
         obj = {}
-        print("parsing obje")
-        if tokens[0].type != 'LBRACE':
-            raise ValueError("Expected '{'")
         tokens.pop(0)  # Consume '{'
         
         while tokens[0].type != 'RBRACE':
-            print(f"Current token: {tokens[0]}")
             key_token = tokens.pop(0)
             if key_token.type != 'STRING':
                 raise ValueError("Expected a string key")
             key = key_token.value
-            print(f"Object so far: {obj}")
             
             if tokens.pop(0).type != 'COLON':
                 raise ValueError("Expected ':' after key")
             
             value_token = tokens.pop(0)
-            if value_token.type != 'STRING':
-                raise ValueError("Expected a string value")
-            value = value_token.value
+            value = parse_value(value_token)
             
             obj[key] = value
             
             if tokens[0].type == 'COMMA':
                 tokens.pop(0)  # Consume ',' and expect another pair
-                if tokens[0].type == 'RBRACE':
-                    raise ValueError("Unexpected '}' after ','")
             elif tokens[0].type != 'RBRACE':
                 raise ValueError("Expected ',' or '}' after a key-value pair")
         
@@ -93,11 +102,9 @@ def parse(tokens):
         raise ValueError("Empty token list")
     
     ast = parse_object(tokens)
-    print(f"Final AST: {ast}")
     if tokens[0].type != 'EOF':
         raise ValueError("Expected end of file after JSON object")
     return ast
-
 
 def main(file_path):
     try:

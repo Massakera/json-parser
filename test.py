@@ -2,7 +2,7 @@ import os
 import subprocess
 
 # Directory containing your test JSON files
-test_dir = 'tests/step2/'
+test_dir = 'tests/step3/'
 
 # Iterate over every file in the test directory
 for filename in os.listdir(test_dir):
