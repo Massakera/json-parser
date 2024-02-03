@@ -34,10 +34,8 @@ def lexer(input):
     whitespace_pattern = re.compile(r'\s+')
 
     while input:
-        # Skip whitespace before matching other tokens
         whitespace_match = whitespace_pattern.match(input)
         if whitespace_match:
-            # Move input past the matched whitespace and continue
             input = input[whitespace_match.end():]
 
         match = None
@@ -47,7 +45,6 @@ def lexer(input):
             if match:
                 value = match.group(0)
                 if type == 'STRING':
-                    # Remove quotes for the value
                     value = value[1:-1]
                 tokens.append(Token(type, value))
                 input = input[match.end():]
@@ -55,23 +52,20 @@ def lexer(input):
         if not match:
             if input:  # Only raise an error if there's non-whitespace input left
                 raise ValueError(f"Unexpected character: {input[0]}")
-            break  # Exit the loop if only whitespace is left
+            break 
 
     tokens.append(Token('EOF', None))
     return tokens
 
 def parse(tokens):
     def parse_value(tokens):
-        # Ensure we're working with the list of tokens
-        # First, check the type of the next token without removing it from the list
         next_token_type = tokens[0].type
 
         if next_token_type == 'LBRACE':
-            return parse_object(tokens)  # Pass the remaining tokens for recursive parsing
+            return parse_object(tokens)  
         elif next_token_type == 'LBRACKET':
-            return parse_array(tokens)  # Pass the remaining tokens for recursive parsing
+            return parse_array(tokens) 
         else:
-            # For non-structure types, now pop the token and process it
             token = tokens.pop(0)
             if token.type == 'STRING':
                 return token.value
@@ -93,7 +87,7 @@ def parse(tokens):
         array = []
         tokens.pop(0)  # Consume the opening '['
         while tokens[0].type != 'RBRACKET':
-            element = parse_value(tokens)  # Correctly pass the entire tokens list
+            element = parse_value(tokens)  
             array.append(element)
             if tokens[0].type == 'COMMA':
                 tokens.pop(0)  # Consume the comma, if present
@@ -112,8 +106,8 @@ def parse(tokens):
             if tokens.pop(0).type != 'COLON':
                 raise ValueError("Expected ':' after key")
 
-            value_token = tokens[0]  # No need to pop here; parse_value will handle it.
-            value = parse_value(tokens)  # This will consume the value token(s).
+            value_token = tokens[0]  
+            value = parse_value(tokens)  
             
             obj[key_token.value] = value
             
