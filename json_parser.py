@@ -106,7 +106,6 @@ def parse(tokens):
             if tokens.pop(0).type != 'COLON':
                 raise ValueError("Expected ':' after key")
 
-            value_token = tokens[0]  
             value = parse_value(tokens)  
             
             obj[key_token.value] = value
