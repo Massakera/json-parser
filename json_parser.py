@@ -12,7 +12,11 @@ TOKEN_TYPES = {
     'NULL': r'null',
     'COLON': r':',
     'COMMA': r',',
-    'EOF': r'$'
+    'EOF': r'$',
+    'LBRACKET': r'\[',
+    'RBRACKET': r'\]',
+    'TRUE': r'true',  # Recognize lowercase 'true'
+    'FALSE': r'false',  # Recognize lowercase 'false'
 }
 
 
@@ -57,45 +61,67 @@ def lexer(input):
     return tokens
 
 def parse(tokens):
-    def parse_value(token):
-        if token.type == 'STRING':
-            return token.value
-        elif token.type == 'NUMBER':
-            try:
-                return int(token.value)
-            except ValueError:
-                return float(token.value)
-        elif token.type == 'BOOLEAN':
-            return token.value == 'true'
-        elif token.type == 'NULL':
-            return None
+    def parse_value(tokens):
+        # Ensure we're working with the list of tokens
+        # First, check the type of the next token without removing it from the list
+        next_token_type = tokens[0].type
+
+        if next_token_type == 'LBRACE':
+            return parse_object(tokens)  # Pass the remaining tokens for recursive parsing
+        elif next_token_type == 'LBRACKET':
+            return parse_array(tokens)  # Pass the remaining tokens for recursive parsing
         else:
-            raise ValueError(f"Unsupported value type: {token.type}")
+            # For non-structure types, now pop the token and process it
+            token = tokens.pop(0)
+            if token.type == 'STRING':
+                return token.value
+            elif token.type == 'NUMBER':
+                try:
+                    return int(token.value)
+                except ValueError:
+                    return float(token.value)
+            elif token.type == 'BOOLEAN':
+                return token.value == 'true'
+            elif token.type == 'NULL':
+                return None
+            else:
+                raise ValueError(f"Unsupported value type: {token.type}")
+
+
+        
+    def parse_array(tokens):
+        array = []
+        tokens.pop(0)  # Consume the opening '['
+        while tokens[0].type != 'RBRACKET':
+            element = parse_value(tokens)  # Correctly pass the entire tokens list
+            array.append(element)
+            if tokens[0].type == 'COMMA':
+                tokens.pop(0)  # Consume the comma, if present
+        tokens.pop(0)  # Consume the closing ']'
+        return array
+
+
 
     def parse_object(tokens):
         obj = {}
-        tokens.pop(0)  # Consume '{'
-        
+        tokens.pop(0)  # Consume the opening '{'
         while tokens[0].type != 'RBRACE':
             key_token = tokens.pop(0)
             if key_token.type != 'STRING':
                 raise ValueError("Expected a string key")
-            key = key_token.value
-            
             if tokens.pop(0).type != 'COLON':
                 raise ValueError("Expected ':' after key")
+
+            value_token = tokens[0]  # No need to pop here; parse_value will handle it.
+            value = parse_value(tokens)  # This will consume the value token(s).
             
-            value_token = tokens.pop(0)
-            value = parse_value(value_token)
-            
-            obj[key] = value
+            obj[key_token.value] = value
             
             if tokens[0].type == 'COMMA':
-                tokens.pop(0)  # Consume ',' and expect another pair
+                tokens.pop(0)  # Consume the comma, continue parsing the next key-value pair
             elif tokens[0].type != 'RBRACE':
                 raise ValueError("Expected ',' or '}' after a key-value pair")
-        
-        tokens.pop(0)  # Consume '}'
+        tokens.pop(0)  # Consume the closing '}'
         return obj
 
     if not tokens:
